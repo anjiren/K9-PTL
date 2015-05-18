@@ -101,8 +101,9 @@ public class Leitner {
 
     static ICallback onDoneInitializing;
     static ICallback onGotNextItem;
+    final static ICallback onFetchFirebaseUserDataCallback = new FetchFirebaseUserDataCallback();
 
-    private class FetchFirebaseUserDataCallback implements ICallback {
+    private static class FetchFirebaseUserDataCallback implements ICallback {
         @Override
         public void callback(String itemId) {
             Log.e("FLASHCARD FINISHED", itemId);
@@ -129,7 +130,7 @@ public class Leitner {
         onDoneInitializing = _ic;
 
         // Set Firebase references.
-        rootRef = new Firebase("https://testing-waters-2.firebaseio.com/");
+        rootRef = new Firebase("https://burning-fire-9367.firebaseio.com/");
         userRef = rootRef.child("users/" + _userId);
         itemsRef = rootRef.child("items/" + user.getLanguage());
 
@@ -191,7 +192,7 @@ public class Leitner {
         onFlashcardFinished(postTransactionCallback);
     }
 
-    public boolean newSlotsAvailable() {
+    public static boolean newSlotsAvailable() {
         return aliveLItems.size() < maxCards;
     }
 
@@ -208,15 +209,16 @@ public class Leitner {
     Core method called by the view.
     Fetches and returns the next item according to the Leitner algorithm.
      */
-    public void getNextItem(ICallback callback) {
+    public static void getNextItem(ICallback callback) {
         onGotNextItem = callback;
-        fetchFirebaseUserData(new FetchFirebaseUserDataCallback());
+        Log.e("HUH", "WeT");
+        fetchFirebaseUserData();
     }
 
     /*
     Fetches a new item that has never before been entered into the Leitner algorithm.
      */
-    public void getNewItem() {
+    public static void getNewItem() {
         String newItemId = extractItem();
         if (newItemId != null) {
             currLItemId = makeLeitnerItem(newItemId);
@@ -224,7 +226,7 @@ public class Leitner {
         Log.i("GET NEW ITEM", "New current LItemID: " + currLItemId);
     }
 
-    public void getOldItem() {
+    public static  void getOldItem() {
         for (int i = 0; i < maxBinNo; i++) {
             if (isEmptySession()) {
                 newSession();
@@ -239,7 +241,7 @@ public class Leitner {
 
     /* Returns the first item in current session without removing it.
      */
-    public String getNextSessionItem() {
+    public static String getNextSessionItem() {
         ArrayList<String> sessionItemIds = new ArrayList<String>();
         for (String lSessionItemId : lSessionItems.keySet()) {
             sessionItemIds.add(lSessionItemId);
@@ -253,8 +255,10 @@ public class Leitner {
         return lSessionItemFound;
     }
 
-    public void fetchFirebaseUserData(final ICallback callback) {
+    public static void fetchFirebaseUserData() {
+        Log.e("HUH", "wat");
         if (isConnected) {
+            Log.e("HUH", "HERE???");
             userRef.addListenerForSingleValueEvent(new ValueEventListener(){
                 @Override
                 public void onDataChange(DataSnapshot userSnapshot) {
@@ -273,7 +277,6 @@ public class Leitner {
                         if (userSnapshot.child("litems").hasChild("retired")) {
                             for (DataSnapshot lItemSnapshot :
                                     userSnapshot.child("litems/retired").getChildren()) {
-                                Log.e("ITEM!!", lItemSnapshot.getKey());
                                 retiredLItems.put(lItemSnapshot.getKey(),
                                         lItemSnapshot.getValue(LeitnerItem.class));
                             };
@@ -306,7 +309,7 @@ public class Leitner {
                         lSessionNum = 0;
                     }
                     numAliveLItems = aliveLItems.size();
-                    callback.callback("DONE");
+                    onFetchFirebaseUserDataCallback.callback("DONE");
                 }
 
                 @Override
@@ -314,20 +317,23 @@ public class Leitner {
                 }
             });
         } else {
-            callback.callback("FAILED!");
+            Log.e("HUH", "ORRR HERE???");
+            onFetchFirebaseUserDataCallback.callback("FAILED!");
         }
     }
 
     public void onFlashcardFinished(final ICallback postTransactionCallback) {
         Log.i("FLASHCARD FINISHED", "Flashcard finished.");
+        numExercises = numExercises + 1;
 
         // Write back to Firebase as a transaction.
         userRef.runTransaction(new Transaction.Handler() {
             @Override
             public Transaction.Result doTransaction(MutableData currentData) {
+                Log.e("THIS TRANSACTION", "TRANSACTION");
                 if (currentData.getValue() == null) {
-                    Log.i("FLASHCARD FINISHED",
-                            "Server is null, so client should override server.");
+                    Log.i("FLASHCARD FINISHED", "Server is null, so client overrides server.");
+                    // Client overrides server.
                     lItems.put("alive", aliveLItems);
                     lItems.put("retired", retiredLItems);
                     Log.e("DATA", "LITEMS: "+ lItems.toString());
@@ -338,8 +344,7 @@ public class Leitner {
                     currentData.child("lsessitems").setValue(lSessionItems);
                     currentData.child("lsessnum").setValue(lSessionNum);
                     Log.e("DATA", "NUMEXERCISES: " + numExercises);
-                    currentData.child("numexercises").setValue(numExercises + 1);
-                    postTransactionCallback.callback("NULLTRANSDONE");
+                    currentData.child("numexercises").setValue(numExercises);
                 } else {
                     // Check numExercises.
                     if (numExercises >=
@@ -357,8 +362,7 @@ public class Leitner {
                         currentData.child("lsessitems").setValue(lSessionItems);
                         currentData.child("lsessnum").setValue(lSessionNum);
                         Log.e("DATA", "NUMEXERCISES: " + numExercises);
-                        currentData.child("numexercises").setValue(numExercises + 1);
-                        postTransactionCallback.callback("CLIENTOVERRIDETRANSDONE");
+                        currentData.child("numexercises").setValue(numExercises);
                     } else {
                         // Server overrides client.
                         Log.i("FLASHCARD FINISHED",
@@ -366,16 +370,20 @@ public class Leitner {
                         Log.e("FLASHCARD FINISHED", "!!NUMEXERCISES: " + numExercises);
                         Log.e("FLASHCARD FINISHED", "!!NUMEXERCISES at serv: "
                                 + currentData.child("numexercises").getValue());
-                        postTransactionCallback.callback("SERVEROVERRIDETRANSDONE");
                         // OVERRIDE LOCAL!!! TODO!!!
                     }
 
+                }
+                if (!isConnected) {
+                    postTransactionCallback.callback("rawr");
                 }
                 return Transaction.success(currentData);
             }
 
             @Override
             public void onComplete(FirebaseError firebaseError, boolean committed, DataSnapshot currentData) {
+                Log.i("FLASHCARD FINISHED", "transaction oncomplete");
+                postTransactionCallback.callback("???");
             }
         });
     }
@@ -389,7 +397,7 @@ public class Leitner {
         lSessionItems.remove(currLItemId);
     }
 
-    public Boolean isEmptySession() {
+    public static Boolean isEmptySession() {
         return (lSessionItems.size() == 0);
     }
 
@@ -397,7 +405,7 @@ public class Leitner {
     Creates a new session, populating it with the corresponding Leitner items that were
     scheduled for this session number.
      */
-    void newSession() {
+    static void newSession() {
         lSessionNum = lSessionNum + 1;
         for (String lItemId : aliveLItems.keySet()) {
             if (aliveLItems.get(lItemId).getScheduledsession() == lSessionNum) {
@@ -407,7 +415,7 @@ public class Leitner {
         }
     }
 
-    public String makeLeitnerItem(String itemId) {
+    public static String makeLeitnerItem(String itemId) {
         LeitnerItem lItem = new LeitnerItem(0, lSessionNum + 1);
         aliveLItems.put(itemId, lItem);
         return itemId;
@@ -415,7 +423,7 @@ public class Leitner {
 
     /* Walks through the list of stock items until we find one the user doesn't already have.
      */
-    public String extractItem() {
+    public static String extractItem() {
         String itemIdFound = null;
 
         for (Item item : itemsArray) {
@@ -434,25 +442,16 @@ public class Leitner {
     /*
     Checks if considered item is alive.
      */
-    public boolean hasAliveLItem(Item item) {
+    public static boolean hasAliveLItem(Item item) {
         return aliveLItems.containsKey(item.getId());
     };
 
     /*
     Checks if considered item is alive.
      */
-    public boolean hasRetiredLItem(Item item) {
+    public static boolean hasRetiredLItem(Item item) {
         return retiredLItems.containsKey(item.getId());
     };
-
-    public boolean checkIfCorrect(String userInput) {
-        return userInput.equals(getTarget());
-    }
-
-    public void onAnswerUpdated() {
-        Log.i("ON ANSWER UPDATED", "Exercise completed.");
-        removeFromSession();
-    }
 
     public void promote(ICallback postTransactionCallback) {
         // Update bucket.

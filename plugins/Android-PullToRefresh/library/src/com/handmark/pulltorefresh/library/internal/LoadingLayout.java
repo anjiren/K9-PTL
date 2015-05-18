@@ -67,6 +67,7 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
 	private CharSequence mPullLabel;
 	private CharSequence mRefreshingLabel;
 	private CharSequence mReleaseLabel;
+    private CharSequence mTargetLabel;
 
     public Button mHeaderPTLButtonReveal;
     public LinearLayout mHeaderPTLPanelFeedback;
@@ -238,11 +239,11 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
         }
 
         if (View.VISIBLE == mHeaderPTLPanelFeedback.getVisibility()) {
-            mHeaderPTLButtonReveal.setVisibility(View.GONE);
+            mHeaderPTLPanelFeedback.setVisibility(View.GONE);
         }
 
         if (View.VISIBLE == mHeaderPTLTextTarget.getVisibility()) {
-            mHeaderPTLButtonReveal.setVisibility(View.GONE);
+            mHeaderPTLTextTarget.setVisibility(View.GONE);
         }
 	}
 
@@ -265,6 +266,10 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
 		if (null != mHeaderText) {
 			mHeaderText.setText(mRefreshingLabel);
 		}
+
+        if (null != mHeaderPTLTextTarget) {
+            mHeaderPTLTextTarget.setText(mTargetLabel);
+        }
 
 		if (mUseIntrinsicAnimation) {
 			((AnimationDrawable) mHeaderImage.getDrawable()).start();
@@ -291,6 +296,10 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
 		if (null != mHeaderText) {
 			mHeaderText.setText(mPullLabel);
 		}
+
+        if (null != mHeaderPTLTextTarget) {
+            mHeaderPTLTextTarget.setText(mTargetLabel);
+        }
 		mHeaderImage.setVisibility(View.VISIBLE);
 
 		if (mUseIntrinsicAnimation) {
@@ -352,6 +361,9 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
 		if (View.INVISIBLE == mSubHeaderText.getVisibility()) {
 			mSubHeaderText.setVisibility(View.VISIBLE);
 		}
+        if (View.INVISIBLE == mHeaderPTLTextTarget.getVisibility()) {
+            mHeaderPTLTextTarget.setVisibility(View.VISIBLE);
+        }
 	}
 
 	/**
@@ -417,6 +429,10 @@ public abstract class LoadingLayout extends FrameLayout implements ILoadingLayou
         mHeaderImage.setVisibility(View.INVISIBLE);
         mHeaderProgress.setVisibility(View.INVISIBLE);
         resetImpl();
+    }
+
+    public void setTargetLabel(CharSequence label) {
+        mTargetLabel = label;
     }
 
 }

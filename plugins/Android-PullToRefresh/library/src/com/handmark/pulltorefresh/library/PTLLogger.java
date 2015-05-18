@@ -21,10 +21,10 @@ public class PTLLogger {
     private static Firebase eventsRef;
     private static List<Event> pendingEvents = new LinkedList<>();
     private static String userId;
-    private static String promptType = "initial";
+    private static String promptType = "noneyet";
     final private static String waitType = "placeholder";
-    private static String exposure;
-    private static String itemId;
+    private static String exposure = "init";
+    private static String itemId = "init";
     private static int numExercises;
     private static Long emailSession;
     private static Long lastPull;
@@ -72,6 +72,10 @@ public class PTLLogger {
         public String getUserid() {
             return userid;
         }
+
+        public void setUserid(String _userId) {
+            userId = _userId;
+        }
         public String getFirstexposure() {
             return firstexposure;
         }
@@ -116,7 +120,7 @@ public class PTLLogger {
     }
 
     public PTLLogger(String _userId) {
-        firebaseURL = "https://testing-waters-2.firebaseio.com/";
+        firebaseURL = "https://burning-fire-9367.firebaseio.com/";
         rootRef = new Firebase(firebaseURL);
         eventsRef = rootRef.child("events");
         userId = _userId;
@@ -149,17 +153,25 @@ public class PTLLogger {
         Log.i("LOGGER", "updateEmailSession: from " + emailSession);
         if (emailSession == null) {
             emailSession = getCurrentTimestamp();
-            promptType = "initial";
+            updatePromptType("noneyet");
         } else {
             if (getCurrentTimestamp() - lastPull < 60000) { // If last pull was less than 30s ago...
-                promptType = "followup";
+                if (promptType == "initial" || promptType == "followup") {
+                    updatePromptType("followup");
+                } else {
+                    updatePromptType("noneyet");
+                }
             } else {
-                promptType = "initial";
                 emailSession = getCurrentTimestamp();
+                updatePromptType("noneyet");
             }
         }
         Log.i("LOGGER", "updateEmailSession: " + promptType);
         Log.i("LOGGER", "updateEmailSession: to " + emailSession + "(last pull: " + lastPull + ")");
+    }
+
+    static public void updatePromptType(String prompt) {
+        promptType = prompt;
     }
 
     public void updateState(String _exposure, String _itemId, int _bucketNum) {
@@ -169,8 +181,8 @@ public class PTLLogger {
     }
 
     static public void updateLastPull() {
-        lastPull = getCurrentTimestamp();
         updateEmailSession();
+        lastPull = getCurrentTimestamp();
     }
 
     static public void setEmailLoadStart() {
@@ -190,10 +202,16 @@ public class PTLLogger {
     }
 
     static public void writePendingEvents() {
-        for (Event event : pendingEvents) {
-            log(event);
+        if (pendingEvents.size() > 0) {
+            for (Event event : pendingEvents) {
+                if (event.getUserid() == null) {
+                    event.setUserid(userId);
+                }
+                log(event);
+                Log.i("WRITING PENDING EVENT", event.toString());
+            }
+            pendingEvents = new LinkedList<>();
         }
-        pendingEvents = new LinkedList<>();
     }
 
 
@@ -210,18 +228,35 @@ public class PTLLogger {
     }
 
     static public void logEmailsLoaded(int numEmails) {
-        Log.i("LOGGER", "logEmailsLoaded");
-        Map details = new HashMap();
-        details.put("numEmails", numEmails);
-        details.put("emailsession", emailSession);
-        details.put("emailsloaded", emailsLoaded);
-        details.put("isconnected", isConnected);
-        Log.i("LOGGER", "email load time:" + (emailLoadEnd - emailLoadStart));
-        details.put("emailloadtime", emailLoadEnd - emailLoadStart);
-        Event event = new Event(userId, exposure, "emailsloaded", itemId, numExercises, promptType,
-                system, getCurrentDate(), getCurrentTime(), getCurrentTimestamp(),
-                waitType, details);
-        log(event);
+        if (userId != null) {
+            Log.i("LOGGER", "logEmailsLoaded");
+            Map details = new HashMap();
+            details.put("numEmails", numEmails);
+            details.put("emailsession", emailSession);
+            details.put("emailsloaded", emailsLoaded);
+            details.put("isconnected", isConnected);
+            Log.i("LOGGER", "email load time:" + (emailLoadEnd - emailLoadStart));
+            if (emailLoadStart > 0) {
+                details.put("emailloadtime", emailLoadEnd - emailLoadStart);
+            }
+            Event event = new Event(userId, exposure, "emailsloaded", itemId, numExercises, promptType,
+                    system, getCurrentDate(), getCurrentTime(), getCurrentTimestamp(),
+                    waitType, details);
+            log(event);
+        }
+    }
+
+    static public void logEmailsReceived(int numEmails) {
+        if (userId != null) {
+            Log.i("LOGGER", "logEmailsReceived");
+            Map details = new HashMap();
+            details.put("numEmails", numEmails);
+            details.put("isconnected", isConnected);
+            Event event = new Event(userId, exposure, "emailsreceived", itemId, numExercises, promptType,
+                    system, getCurrentDate(), getCurrentTime(), getCurrentTimestamp(),
+                    waitType, details);
+            log(event);
+        }
     }
 
     static public void logDebug(String debugInfo) {
@@ -250,6 +285,9 @@ public class PTLLogger {
     }
 
     public void logSubmit(String result) {
+        if (promptType != "followup") {
+            updatePromptType("initial");
+        }
         Log.i("LOGGER", "logSubmit");
         Map details = new HashMap();
         details.put("emailsession", emailSession);
@@ -287,15 +325,17 @@ public class PTLLogger {
     }
 
     public static void logOnForeground() {
-        Log.i("LOGGER", "logInterruptScroll");
-        Map details = new HashMap();
-        details.put("emailsession", emailSession);
-        details.put("emailsloaded", emailsLoaded);
-        details.put("isconnected", isConnected);
-        Event event = new Event(userId, exposure, "onforeground", itemId, numExercises, promptType,
-                system, getCurrentDate(), getCurrentTime(), getCurrentTimestamp(),
-                waitType, details);
-        log(event);
+        if (userId != null) {
+            Log.i("LOGGER", "logInterruptScroll");
+            Map details = new HashMap();
+            details.put("emailsession", emailSession);
+            details.put("emailsloaded", emailsLoaded);
+            details.put("isconnected", isConnected);
+            Event event = new Event(userId, exposure, "onforeground", itemId, numExercises, promptType,
+                    system, getCurrentDate(), getCurrentTime(), getCurrentTimestamp(),
+                    waitType, details);
+            log(event);
+        }
     }
 
     public static void logOnBackground() {
@@ -311,11 +351,18 @@ public class PTLLogger {
     }
 
     static public void log(Event event) {
+        if (event.getPrompttype() != null) {
+            Log.i("LOGGER", "log: prompttype: "+ event.getPrompttype());
+        }
         if (isConnected) {
-            Firebase eventRef = eventsRef.push();
-            eventRef.setValue(event);
-            Log.i("LOGGER", "log: "+ event.getUserid());
-            Log.i("LOGGER", "log: "+ eventRef.getKey());
+            if (event.getUserid() == null) {
+                pendingEvents.add(event);
+            } else {
+                Firebase eventRef = eventsRef.push();
+                eventRef.setValue(event);
+                Log.i("LOGGER", "log: "+ event.getUserid());
+                Log.i("LOGGER", "log: "+ eventRef.getKey());
+            }
         } else {
             pendingEvents.add(event);
         }

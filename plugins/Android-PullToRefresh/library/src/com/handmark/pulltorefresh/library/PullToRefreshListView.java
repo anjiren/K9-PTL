@@ -134,6 +134,10 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 		// Show the ListView Loading View and set it to refresh.
 		listViewLoadingView.setVisibility(View.VISIBLE);
 		listViewLoadingView.refreshing();
+        if (leitner.getPrompt() == null || leitner.getTarget() == null) {
+            mHeaderLoadingView.mHeaderText.setText("Initializing...");
+            mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.GONE);
+        }
 
         // TODO: Set REVEAL button.
         mHeaderLoadingView.mHeaderPTLButtonReveal.setOnClickListener(new View.OnClickListener() {
@@ -141,7 +145,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
                 logger.logEngage();
                 if (leitner.isFirstExposure()) {
                     mHeaderLoadingView.mHeaderPTLButtonYes.setText("ALREADY KNEW");
-                    mHeaderLoadingView.mHeaderPTLButtonYes.setBackgroundColor(Color.GRAY);
+                    mHeaderLoadingView.mHeaderPTLButtonYes.setBackgroundColor(Color.rgb(162, 228, 184));
                     mHeaderLoadingView.mHeaderPTLButtonYes.setOnClickListener(
                             new View.OnClickListener() {
                                 public void onClick(View v) {
@@ -158,7 +162,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
                             }
                     );
                     mHeaderLoadingView.mHeaderPTLButtonNo.setText("DIDN'T KNOW");
-                    mHeaderLoadingView.mHeaderPTLButtonNo.setBackgroundColor(Color.GRAY);
+                    mHeaderLoadingView.mHeaderPTLButtonNo.setBackgroundColor(Color.rgb(255, 163, 181));
                     mHeaderLoadingView.mHeaderPTLButtonNo.setOnClickListener(
                             new View.OnClickListener() {
                                 public void onClick(View v) {
@@ -175,9 +179,9 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
                             }
                     );
                 } else {
-                    mHeaderLoadingView.mHeaderPTLButtonNo.setText("I WAS RIGHT");
-                    mHeaderLoadingView.mHeaderPTLButtonNo.setBackgroundColor(Color.GREEN);
-                    mHeaderLoadingView.mHeaderPTLButtonNo.setOnClickListener(
+                    mHeaderLoadingView.mHeaderPTLButtonYes.setText("I WAS RIGHT");
+                    mHeaderLoadingView.mHeaderPTLButtonYes.setBackgroundColor(Color.GREEN);
+                    mHeaderLoadingView.mHeaderPTLButtonYes.setOnClickListener(
                             new View.OnClickListener() {
                                 public void onClick(View v) {
                                     Log.i("BUTTON PRESS", "Got it right.");
@@ -192,9 +196,9 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
                                 }
                             }
                     );
-                    mHeaderLoadingView.mHeaderPTLButtonYes.setText("I WAS WRONG");
-                    mHeaderLoadingView.mHeaderPTLButtonYes.setBackgroundColor(Color.RED);
-                    mHeaderLoadingView.mHeaderPTLButtonYes.setOnClickListener(
+                    mHeaderLoadingView.mHeaderPTLButtonNo.setText("I WAS WRONG");
+                    mHeaderLoadingView.mHeaderPTLButtonNo.setBackgroundColor(Color.RED);
+                    mHeaderLoadingView.mHeaderPTLButtonNo.setOnClickListener(
                             new View.OnClickListener() {
                                 public void onClick(View v) {
                                     Log.i("BUTTON PRESS", "Got it wrong.");
@@ -300,7 +304,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
         if (View.VISIBLE == mHeaderLoadingView.mHeaderPTLPanelFeedback.getVisibility()) {
             mHeaderLoadingView.mHeaderPTLPanelFeedback.setVisibility(View.GONE);
         }
-        if (leitner.getPrompt() != null) {
+        if (leitner != null && leitner.getPrompt() != null) {
             mHeaderLoadingView.setRefreshingLabel(leitner.getPrompt());
             mHeaderLoadingView.mHeaderText.setText(leitner.getPrompt());
         }
@@ -462,13 +466,41 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
         public void callback(String string) {
             Log.i("MAIN CALLBACK", "Got next item: " + string);
             String exposure = "notfirst";
-            if (leitner.isFirstExposure()) {
-                exposure = "first";
+            if (leitner == null) {
+                mHeaderLoadingView.setRefreshingLabel("Initializing...");
+                mHeaderLoadingView.mHeaderText.setText("Initializing...");
+                mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.GONE);
+            } else {
+                if (leitner.isFirstExposure()) {
+                    exposure = "first";
+                }
+                logger.updateState(exposure, leitner.getItemId(), leitner.getCurrentBucket());
+                if (leitner.getPrompt() == null) {
+                    mHeaderLoadingView.setRefreshingLabel("Initializing...");
+                    mHeaderLoadingView.mHeaderText.setText("Initializing...");
+                    mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.GONE);
+                    mHeaderLoadingView.mHeaderPTLTextTarget.setText("[]");
+                    mHeaderLoadingView.setTargetLabel("[]");
+                    logger.logDebug("missingprompt");
+                } else {
+                    mHeaderLoadingView.setRefreshingLabel(leitner.getPrompt());
+                    mHeaderLoadingView.mHeaderText.setText(leitner.getPrompt());
+                    mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.VISIBLE);
+                }
+
+                if (leitner.getTarget() == null) {
+                    mHeaderLoadingView.setRefreshingLabel("Initializing...");
+                    mHeaderLoadingView.mHeaderText.setText("Initializing...");
+                    mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.GONE);
+                    mHeaderLoadingView.mHeaderPTLTextTarget.setText("[]");
+                    mHeaderLoadingView.setTargetLabel("[]");
+                    logger.logDebug("missingtarget");
+                } else if (leitner.getPrompt() != null) {
+                    mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.VISIBLE);
+                    mHeaderLoadingView.mHeaderPTLTextTarget.setText(leitner.getTarget());
+                    mHeaderLoadingView.setTargetLabel(leitner.getTarget());
+                }
             }
-            logger.updateState(exposure, leitner.getItemId(), leitner.getCurrentBucket());
-            mHeaderLoadingView.setRefreshingLabel(leitner.getPrompt());
-            mHeaderLoadingView.mHeaderText.setText(leitner.getPrompt());
-            mHeaderLoadingView.mHeaderPTLTextTarget.setText(leitner.getTarget());
         }
     }
 
@@ -486,7 +518,11 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 
     public void showNextExercise() {
         Log.i("MAIN", "Getting next exercise...");
-        leitner.getNextItem(onGotNextItem);
+        if (leitner == null) {
+            Log.e("HUH", "HELLO? Leitner is null? Why? Getting next item??");
+        }
+        Log.e("HUH", "what about here?");
+        Leitner.getNextItem(onGotNextItem);
     }
 
     public Handler onRefreshCompleteHandler;

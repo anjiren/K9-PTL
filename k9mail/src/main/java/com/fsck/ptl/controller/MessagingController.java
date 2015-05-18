@@ -1107,6 +1107,7 @@ public class MessagingController implements Runnable {
              */
             int newMessages = downloadMessages(account, remoteFolder, localFolder, remoteMessages,
                     false);
+            Log.i("numEmails", "controller: synchronizeMailboxSynchronous: " + newMessages);
 
             int unreadMessageCount = localFolder.getUnreadMessageCount();
             for (MessagingListener l : getListeners()) {
@@ -5394,6 +5395,9 @@ public class MessagingController implements Runnable {
 
                     account.setRingNotified(false);
                     int newCount = downloadMessages(account, remoteFolder, localFolder, messages, flagSyncOnly);
+                    Log.i("numEmails", "controller: messages arrived: " + newCount);
+                    PTLLogger.logEmailsReceived(newCount);
+
 
                     int unreadMessageCount = localFolder.getUnreadMessageCount();
 

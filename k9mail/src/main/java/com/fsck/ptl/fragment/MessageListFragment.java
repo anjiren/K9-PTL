@@ -761,8 +761,9 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
 
             } else if (mCurrentFolder != null && isRemoteSearch() &&
                     mExtraSearchResults != null && mExtraSearchResults.size() > 0) {
-
                 int numResults = mExtraSearchResults.size();
+                Log.i("numEmails", "isRemoteSearch: " + numResults);
+
                 int limit = mAccount.getRemoteSearchNumResults();
 
                 List<Message> toProcess = mExtraSearchResults;
@@ -861,7 +862,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
 
         // TODO: Setup Firebase.
         Firebase.setAndroidContext(appContext);
-        rootRef = new Firebase("https://testing-waters-2.firebaseio.com/");
+        rootRef = new Firebase("https://burning-fire-9367.firebaseio.com/");
         // Wait for Leitner to initialize first...
         initializeFirebase();
     }
@@ -912,6 +913,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
                             user = new LeitnerUser(userSnapshot);
                             leitner = new Leitner(userId, user, leitnerInitCallback);
                             logger = new PTLLogger(userId);
+                            Log.e("set leitner2", "here and userId"+userId);
                             mPullToRefreshView.setLeitner(leitner);
                             mPullToRefreshView.setLogger(logger);
                         }
@@ -938,6 +940,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
                                     user = new LeitnerUser(snapshot);
                                     leitner = new Leitner(userId, user, leitnerInitCallback);
                                     logger = new PTLLogger(userId);
+                                    Log.e("set leitner", "here and userId"+userId);
                                     mPullToRefreshView.setLeitner(leitner);
                                     mPullToRefreshView.setLogger(logger);
                                 }
@@ -1210,10 +1213,13 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
 
         Context appContext = getActivity().getApplicationContext();
         // Reset Leitner.
-        PTLLogger.logOnForeground();
+        Log.e("HUH", "on resume");
         if (leitner != null && user != null) {
+            Log.e("HUH", "is dis messin things up");
             leitner = new Leitner(userId, user, leitnerInitCallback);
         }
+        logger = new PTLLogger(userId);
+        logger.logOnForeground();
 
         mSenderAboveSubject = K9.messageListSenderAboveSubject();
 
@@ -1276,6 +1282,10 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
         mPullToRefreshView.setEmptyView(loadingView);
 
         if (isRemoteSearchAllowed()) {
+            logger.updateLastPull();
+            logger.setEmailLoadStart();
+            logger.setEmailsLoaded(false);
+            logger.logPull();
             // "Pull to search server"
             mPullToRefreshView.setOnRefreshListener(
                     new PullToRefreshBase.OnRefreshListener<ListView>() {
@@ -1884,6 +1894,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
             mHandler.progress(false);
             mHandler.remoteSearchFinished();
             mExtraSearchResults = extraResults;
+            Log.e("numEmails", "remoteSearchFinished" + numResults);
             if (extraResults != null && extraResults.size() > 0) {
                 mHandler.updateFooter(String.format(mContext.getString(R.string.load_more_messages_fmt), maxResults));
             } else {
@@ -1930,6 +1941,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
                 PTLLogger.setEmailLoadEnd();
                 PTLLogger.setEmailsLoaded(true);
                 PTLLogger.logEmailsLoaded(numNewMessages);
+                Log.e("numEmails", "synchronizeMailboxFinished: " + numNewMessages);
             }
             super.synchronizeMailboxFinished(account, folder, totalMessagesInMailbox, numNewMessages);
         }
@@ -1944,6 +1956,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
                 PTLLogger.setEmailLoadEnd();
                 PTLLogger.setEmailsLoaded(true);
                 PTLLogger.logEmailsLoaded(0);
+                Log.e("numEmails", "remoteSearchFailed");
             }
             super.synchronizeMailboxFailed(account, folder, message);
         }
@@ -1953,6 +1966,7 @@ public class MessageListFragment extends Fragment implements OnItemClickListener
             if (isSingleAccountMode() && isSingleFolderMode() && mAccount.equals(account) &&
                     mFolderName.equals(folder)) {
                 mUnreadMessageCount = unreadMessageCount;
+                Log.e("numEmails", "folderStatusChanged: " + unreadMessageCount);
             }
             super.folderStatusChanged(account, folder, unreadMessageCount);
         }
