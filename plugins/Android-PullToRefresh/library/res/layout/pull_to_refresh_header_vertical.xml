@@ -92,7 +92,7 @@
                 <Button
                     android:layout_width="61dp"
                     android:layout_height="45dp"
-                    android:text="REVEAL"
+                    android:text="reveal"
                     android:id="@+id/ptl_button_reveal"
                     android:textSize="10dp"
                     android:scaleType="fitCenter"

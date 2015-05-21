@@ -139,7 +139,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
             mHeaderLoadingView.mHeaderPTLButtonReveal.setVisibility(View.GONE);
         }
 
-        // TODO: Set REVEAL button.
+        // TODO: onReveal listener
         mHeaderLoadingView.mHeaderPTLButtonReveal.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 logger.logEngage();
@@ -266,7 +266,7 @@ public class PullToRefreshListView extends PullToRefreshAdapterViewBase<ListView
 			default:
 				originalLoadingLayout = getHeaderLayout();
 				listViewLoadingLayout = mHeaderLoadingView;
-                // TODO:
+                // TODO: customize panel size
 				scrollToHeight = -getHeaderSize();
 				selection = 0;
 				scrollLvToEdge = Math.abs(mRefreshableView.getFirstVisiblePosition() - selection) <= 1;
